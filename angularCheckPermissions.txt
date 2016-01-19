@@ -1,0 +1,68 @@
+<script type="text/javascript" src="/sites/dev/Shared%20Documents/scripts/jquery.min.js"></script>
+<script type="text/javascript" src="/sites/dev/Shared%20Documents/scripts/bootstrap.min.js"></script>
+<script type="text/javascript" src="/sites/dev/Shared%20Documents/scripts/angular.js"></script>
+<script type="text/javascript" src="/_layouts/15/sp.js"></script>
+<script type="text/javascript" src="/_layouts/15/sp.runtime.js"></script>
+
+<script>
+	'use strict';
+
+	var permissionsApp = angular.module('permissionsApp', []);
+
+	permissionsApp.controller('PermissionsController',
+		function PermissionsController($scope, $http) {
+
+			$scope.response = {};
+			$scope.response.high = "";
+			$scope.response.low = "";
+			$scope.response.hasPermission = "";
+
+			$scope.send = function(request) {
+				
+				let restUrl = request.url + "/_api/web/lists/getbytitle('" + request.listName + "')/getusereffectivepermissions(@u)?@u='" + encodeURIComponent(request.userName) + "'";
+				//alert(restUrl);
+
+				//make the json call
+				$http.get(restUrl).then((data) => {
+					//alert('success');
+					//if we have dont have a null response attach the entries to the scope
+					if (data !== null) {
+						$scope.response.high = data.data.High;
+						$scope.response.low = data.data.Low;
+						var permissions = new SP.BasePermissions();
+						permissions.initPropertiesFromJson(data.data);
+						var hasPermission = permissions.has(SP.PermissionKind.addListItems); 
+						$scope.response.hasPermission = hasPermission;
+					} else {
+						//show an error if response is null
+						alert('response is null');
+					}
+
+				},
+
+				//promise error handler for safety, haven't seen it hit here though
+				(err) => {
+
+					alert('Error: ' + err);
+
+				});
+
+				//$scope.response = angular.copy(request);
+			};
+		}
+	);
+</script>
+
+<div ng-app="permissionsApp">
+	<div ng-controller="PermissionsController" style="padding-left:20px; padding-right:20px">
+		<h2>Check SharePoint Permissions</h2>
+			
+		Username: <input type='text' ng-model="request.userName" ng-init="request.userName='i:0#.f|membership|admin@sppubhub.onmicrosoft.com'" style="width: 400px;" /><br />
+		Site URL: &nbsp;&nbsp;&nbsp;<input type='text' ng-model="request.url" ng-init="request.url='https://sppubhub.sharepoint.com/sites/dev'" style="width: 400px;" /><br />
+		List Name: <input type='text' ng-model="request.listName" ng-init="request.listName='Documents'" /><br />
+		<input type="button" ng-click="send(request)" value="Get" />
+		<hr />
+		<pre>request = {{request | json}}</pre>
+		<pre>response = {{response | json}}</pre>
+	</div>
+</div>
